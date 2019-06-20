@@ -100,7 +100,7 @@ const tA2D_SBC_CIE btc_av_sbc_default_config = {
     A2D_SBC_IE_CH_MD_JOINT,         /* ch_mode */
     A2D_SBC_IE_BLOCKS_16,           /* block_len */
     A2D_SBC_IE_SUBBAND_8,           /* num_subbands */
-    A2D_SBC_IE_ALLOC_MD_L,          /* alloc_mthd */
+    A2D_SBC_IE_ALLOC_MD_S,          /* alloc_mthd */  // TODO: LIZN/NIF - Make these configurable
     BTA_AV_CO_SBC_MAX_BITPOOL,      /* max_bitpool */
     A2D_SBC_IE_MIN_BITPOOL          /* min_bitpool */
 };
@@ -385,10 +385,11 @@ void bta_av_build_src_cfg (UINT8 *p_pref_cfg, UINT8 *p_src_cap)
         return ;
     }
 
-    if (src_cap.samp_freq & A2D_SBC_IE_SAMP_FREQ_48) {
-        pref_cap.samp_freq = A2D_SBC_IE_SAMP_FREQ_48;
-    } else if (src_cap.samp_freq & A2D_SBC_IE_SAMP_FREQ_44) {
+    #warning "LIZN/NIF modified preferences for sampling freq"
+    if (src_cap.samp_freq & A2D_SBC_IE_SAMP_FREQ_44) {
         pref_cap.samp_freq = A2D_SBC_IE_SAMP_FREQ_44;
+    } else if (src_cap.samp_freq & A2D_SBC_IE_SAMP_FREQ_48) {
+        pref_cap.samp_freq = A2D_SBC_IE_SAMP_FREQ_48;
     }
 
     if (src_cap.ch_mode & A2D_SBC_IE_CH_MD_JOINT) {
@@ -1285,27 +1286,50 @@ static BOOLEAN bta_av_co_audio_peer_src_supports_codec(tBTA_AV_CO_PEER *p_peer, 
     /* Configure the codec type to look for */
     codec_type = bta_av_co_cb.codec_cfg.id;
 
+    tA2D_SBC_CIE* pLocalCaps = (tA2D_SBC_CIE *)&bta_av_co_sbc_sink_caps;
+    tA2D_SBC_CIE sModCaps;
+    memcpy(&sModCaps,pLocalCaps,sizeof(sModCaps));
+    sModCaps.samp_freq &= ~A2D_SBC_IE_SAMP_FREQ_MSK;
+    sModCaps.samp_freq |= A2D_SBC_IE_SAMP_FREQ_44;
+    tA2D_SBC_CIE* pSearchCaps = &sModCaps;
+    int match44 = -1;
+    int match   = -1;
 
     for (index = 0; index < p_peer->num_sup_srcs; index++) {
         if (p_peer->srcs[index].codec_type == codec_type) {
             switch (bta_av_co_cb.codec_cfg.id) {
             case BTC_AV_CODEC_SBC:
-                if (p_src_index) {
-                    *p_src_index = index;
+                if (0 ==  bta_av_sbc_cfg_matches_cap((UINT8 *)p_peer->srcs[index].codec_caps,
+                                                     pLocalCaps)) {
+                    if(match<0) match = index;
                 }
                 if (0 ==  bta_av_sbc_cfg_matches_cap((UINT8 *)p_peer->srcs[index].codec_caps,
-                                                     (tA2D_SBC_CIE *)&bta_av_co_sbc_sink_caps)) {
-                    return TRUE;
+                                                     pSearchCaps)) {
+                    match44 = index;
+                    goto SelectPreferred;
                 }
                 break;
-
             default:
+
                 APPL_TRACE_ERROR("peer_src_supports_codec: unsupported codec id %d",
                                  bta_av_co_cb.codec_cfg.id);
                 return FALSE;
                 break;
             }
         }
+    }
+
+SelectPreferred:
+    // Prefer 44K1
+    if (p_src_index && match44>=0)
+    {
+        *p_src_index = match44;
+        return TRUE;
+    }
+    if (p_src_index && match>=0)
+    {
+        *p_src_index = match;
+        return TRUE;
     }
     return FALSE;
 }
