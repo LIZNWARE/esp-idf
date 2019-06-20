@@ -108,15 +108,21 @@ void gatt_init (void)
     gatt_cb.trace_level = BT_TRACE_LEVEL_NONE;    /* No traces */
 #endif
     gatt_cb.def_mtu_size = GATT_DEF_BLE_MTU_SIZE;
-    gatt_cb.sign_op_queue = fixed_queue_new(QUEUE_SIZE_MAX);
-    gatt_cb.srv_chg_clt_q = fixed_queue_new(QUEUE_SIZE_MAX);
-    gatt_cb.pending_new_srv_start_q = fixed_queue_new(QUEUE_SIZE_MAX);
+
+    // TODO: Make configuration mechanism for GATT parameters
+    #warning "GATT Parameters patched by NIF/LIZN"
+    #define GATT_QUEUE_SIZE  (32) // Used to be max queue size = 254
+
+    gatt_cb.sign_op_queue = fixed_queue_new(GATT_QUEUE_SIZE);
+    gatt_cb.srv_chg_clt_q = fixed_queue_new(GATT_QUEUE_SIZE);
+    gatt_cb.pending_new_srv_start_q = fixed_queue_new(GATT_QUEUE_SIZE);
+
     /* First, register fixed L2CAP channel for ATT over BLE */
     fixed_reg.fixed_chnl_opts.mode         = L2CAP_FCR_BASIC_MODE;
     fixed_reg.fixed_chnl_opts.max_transmit = 0xFF;
-    fixed_reg.fixed_chnl_opts.rtrans_tout  = 2000;
-    fixed_reg.fixed_chnl_opts.mon_tout     = 12000;
-    fixed_reg.fixed_chnl_opts.mps          = 670;
+    fixed_reg.fixed_chnl_opts.rtrans_tout  = 500;     // 2000;
+    fixed_reg.fixed_chnl_opts.mon_tout     = 2000;    // 12000
+    fixed_reg.fixed_chnl_opts.mps          = 251;     // 670
     fixed_reg.fixed_chnl_opts.tx_win_sz    = 1;
 
     fixed_reg.pL2CA_FixedConn_Cb = gatt_le_connect_cback;
