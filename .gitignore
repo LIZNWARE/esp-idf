@@ -15,6 +15,9 @@ GPATH
 .#*
 \#*#
 
+# eclipse project
+.project
+
 # eclipse setting
 .settings
 
