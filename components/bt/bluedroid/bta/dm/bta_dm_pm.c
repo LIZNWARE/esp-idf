@@ -667,14 +667,14 @@ static BOOLEAN bta_dm_pm_park(BD_ADDR peer_addr)
 ** Returns          TRUE if sniff attempted, FALSE otherwise.
 **
 *******************************************************************************/
-int bLIZN_AvoidSniff = 0;
+int bBTA_dm_pm_sniff_Skip = 0;
 
 static BOOLEAN bta_dm_pm_sniff(tBTA_DM_PEER_DEVICE *p_peer_dev, UINT8 index)
 {
 
-    if(bLIZN_AvoidSniff)
+    if(bBTA_dm_pm_sniff_Skip)
     {
-      APPL_TRACE_WARNING("bta_dm_pm_sniff LIZN Hack skips sniff");
+      APPL_TRACE_WARNING("Hack skips sniff attempt");
       return TRUE;
     }
 

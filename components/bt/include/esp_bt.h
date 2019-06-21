@@ -25,6 +25,20 @@
 extern "C" {
 #endif
 
+// TODO: LIZN/NIF Clean up.
+// This define is here to tell app whether a hacked version of bta_dm_pm_sniff(...) is available.
+#define ESP_BTA_DM_PM_AVOID_SNIFF_HACK_AVAILABLE 1
+#if ESP_BTA_DM_PM_AVOID_SNIFF_HACK_AVAILABLE
+extern int bBTA_dm_pm_sniff_Skip;
+static inline void esp_bt_set_sniff_skip(int bSkip)
+{
+  bBTA_dm_pm_sniff_Skip = bSkip;
+}
+#else
+#define esp_bt_set_sniff_skip(...)
+#endif
+
+
 #define ESP_BT_CONTROLLER_CONFIG_MAGIC_VAL  0x20190506
 
 /**
