@@ -667,8 +667,17 @@ static BOOLEAN bta_dm_pm_park(BD_ADDR peer_addr)
 ** Returns          TRUE if sniff attempted, FALSE otherwise.
 **
 *******************************************************************************/
+int bBTA_dm_pm_sniff_Skip = 0;
+
 static BOOLEAN bta_dm_pm_sniff(tBTA_DM_PEER_DEVICE *p_peer_dev, UINT8 index)
 {
+
+    if(bBTA_dm_pm_sniff_Skip)
+    {
+      APPL_TRACE_WARNING("Hack skips sniff attempt");
+      return TRUE;
+    }
+
     tBTM_PM_MODE    mode = BTM_PM_STS_ACTIVE;
     tBTM_PM_PWR_MD  pwr_md;
     tBTM_STATUS     status;
