@@ -37,6 +37,8 @@
 
 #if (defined BLE_INCLUDED) && (BLE_INCLUDED == TRUE)
 
+#define _SEND(P) btu_hcif_send_cmd(LOCAL_BLE_CONTROLLER_ID,P)
+
 BOOLEAN btsnd_hcic_ble_set_local_used_feat (UINT8 feat_set[8])
 {
     BT_HDR *p;
@@ -54,7 +56,7 @@ BOOLEAN btsnd_hcic_ble_set_local_used_feat (UINT8 feat_set[8])
     UINT16_TO_STREAM (pp, HCI_BLE_WRITE_LOCAL_SPT_FEAT);
     ARRAY_TO_STREAM (pp, feat_set, HCIC_PARAM_SIZE_SET_USED_FEAT_CMD);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -77,7 +79,7 @@ BOOLEAN btsnd_hcic_ble_set_random_addr (BD_ADDR random_bda)
 
     BDADDR_TO_STREAM (pp, random_bda);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -109,7 +111,7 @@ BOOLEAN btsnd_hcic_ble_write_adv_params (UINT16 adv_int_min, UINT16 adv_int_max,
     UINT8_TO_STREAM (pp, channel_map);
     UINT8_TO_STREAM (pp, adv_filter_policy);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 BOOLEAN btsnd_hcic_ble_read_adv_chnl_tx_power (void)
@@ -129,7 +131,7 @@ BOOLEAN btsnd_hcic_ble_read_adv_chnl_tx_power (void)
     UINT16_TO_STREAM (pp, HCI_BLE_READ_ADV_CHNL_TX_POWER);
     UINT8_TO_STREAM  (pp, HCIC_PARAM_SIZE_READ_CMD);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 
 }
@@ -167,7 +169,7 @@ BOOLEAN btsnd_hcic_ble_set_adv_data (UINT8 data_len, UINT8 *p_data)
 
         ARRAY_TO_STREAM (pp, p_data, data_len);
     }
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
 
     return (TRUE);
 }
@@ -202,7 +204,7 @@ BOOLEAN btsnd_hcic_ble_set_scan_rsp_data (UINT8 data_len, UINT8 *p_scan_rsp)
         ARRAY_TO_STREAM (pp, p_scan_rsp, data_len);
     }
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
 
     return (TRUE);
 }
@@ -226,7 +228,7 @@ BOOLEAN btsnd_hcic_ble_set_adv_enable (UINT8 adv_enable)
 
     UINT8_TO_STREAM (pp, adv_enable);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 BOOLEAN btsnd_hcic_ble_set_scan_params (UINT8 scan_type,
@@ -254,7 +256,7 @@ BOOLEAN btsnd_hcic_ble_set_scan_params (UINT8 scan_type,
     UINT8_TO_STREAM (pp, addr_type_own);
     UINT8_TO_STREAM (pp, scan_filter_policy);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -278,7 +280,7 @@ BOOLEAN btsnd_hcic_ble_set_scan_enable (UINT8 scan_enable, UINT8 duplicate)
     UINT8_TO_STREAM (pp, scan_enable);
     UINT8_TO_STREAM (pp, duplicate);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -322,7 +324,7 @@ BOOLEAN btsnd_hcic_ble_create_ll_conn (UINT16 scan_int, UINT16 scan_win,
     UINT16_TO_STREAM (pp, min_ce_len);
     UINT16_TO_STREAM (pp, max_ce_len);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -343,7 +345,7 @@ BOOLEAN btsnd_hcic_ble_create_conn_cancel (void)
     UINT16_TO_STREAM (pp, HCI_BLE_CREATE_CONN_CANCEL);
     UINT8_TO_STREAM  (pp, HCIC_PARAM_SIZE_BLE_CREATE_CONN_CANCEL);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -364,7 +366,7 @@ BOOLEAN btsnd_hcic_ble_clear_white_list (void)
     UINT16_TO_STREAM (pp, HCI_BLE_CLEAR_WHITE_LIST);
     UINT8_TO_STREAM  (pp, HCIC_PARAM_SIZE_CLEAR_WHITE_LIST);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -388,7 +390,7 @@ BOOLEAN btsnd_hcic_ble_add_white_list (UINT8 addr_type, BD_ADDR bda)
     UINT8_TO_STREAM (pp, addr_type);
     BDADDR_TO_STREAM (pp, bda);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -412,7 +414,7 @@ BOOLEAN btsnd_hcic_ble_remove_from_white_list (UINT8 addr_type, BD_ADDR bda)
     UINT8_TO_STREAM (pp, addr_type);
     BDADDR_TO_STREAM (pp, bda);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -445,7 +447,7 @@ BOOLEAN btsnd_hcic_ble_upd_ll_conn_params (UINT16 handle,
     UINT16_TO_STREAM (pp, min_ce_len);
     UINT16_TO_STREAM (pp, max_ce_len);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -468,7 +470,7 @@ BOOLEAN btsnd_hcic_ble_set_host_chnl_class (UINT8  chnl_map[HCIC_BLE_CHNL_MAP_SI
 
     ARRAY_TO_STREAM (pp, chnl_map, HCIC_BLE_CHNL_MAP_SIZE);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -491,7 +493,7 @@ BOOLEAN btsnd_hcic_ble_read_chnl_map (UINT16 handle)
 
     UINT16_TO_STREAM (pp, handle);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -514,7 +516,7 @@ BOOLEAN btsnd_hcic_ble_read_remote_feat (UINT16 handle)
 
     UINT16_TO_STREAM (pp, handle);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -556,7 +558,7 @@ BOOLEAN btsnd_hcic_ble_encrypt (UINT8 *key, UINT8 key_len,
     pp += (HCIC_BLE_ENCRYT_KEY_SIZE - key_len);
     ARRAY_TO_STREAM (pp, plain_text, pt_len);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -581,7 +583,7 @@ BOOLEAN btsnd_hcic_ble_rand (void *p_cmd_cplt_cback)
     UINT16_TO_STREAM (pp, HCI_BLE_RAND);
     UINT8_TO_STREAM  (pp, HCIC_PARAM_SIZE_BLE_RAND);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -608,7 +610,7 @@ BOOLEAN btsnd_hcic_ble_start_enc (UINT16 handle, UINT8 rand[HCIC_BLE_RAND_DI_SIZ
     UINT16_TO_STREAM (pp, ediv);
     ARRAY_TO_STREAM (pp, ltk, HCIC_BLE_ENCRYT_KEY_SIZE);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -632,7 +634,7 @@ BOOLEAN btsnd_hcic_ble_ltk_req_reply (UINT16 handle, UINT8 ltk[HCIC_BLE_ENCRYT_K
     UINT16_TO_STREAM (pp, handle);
     ARRAY_TO_STREAM (pp, ltk, HCIC_BLE_ENCRYT_KEY_SIZE);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -655,7 +657,7 @@ BOOLEAN btsnd_hcic_ble_ltk_req_neg_reply (UINT16 handle)
 
     UINT16_TO_STREAM (pp, handle);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -678,7 +680,7 @@ BOOLEAN btsnd_hcic_ble_receiver_test(UINT8 rx_freq)
 
     UINT8_TO_STREAM (pp, rx_freq);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -703,7 +705,7 @@ BOOLEAN btsnd_hcic_ble_transmitter_test(UINT8 tx_freq, UINT8 test_data_len, UINT
     UINT8_TO_STREAM (pp, test_data_len);
     UINT8_TO_STREAM (pp, payload);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -724,7 +726,7 @@ BOOLEAN btsnd_hcic_ble_test_end(void)
     UINT16_TO_STREAM (pp, HCI_BLE_TEST_END);
     UINT8_TO_STREAM  (pp, HCIC_PARAM_SIZE_READ_CMD);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -745,7 +747,7 @@ BOOLEAN btsnd_hcic_ble_read_host_supported (void)
     UINT16_TO_STREAM (pp, HCI_READ_LE_HOST_SUPPORT);
     UINT8_TO_STREAM  (pp, HCIC_PARAM_SIZE_READ_CMD);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -779,7 +781,7 @@ BOOLEAN btsnd_hcic_ble_rc_param_req_reply(  UINT16 handle,
     UINT16_TO_STREAM (pp, min_ce_len);
     UINT16_TO_STREAM (pp, max_ce_len);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 
@@ -803,7 +805,7 @@ BOOLEAN btsnd_hcic_ble_rc_param_req_neg_reply(UINT16 handle, UINT8 reason)
     UINT16_TO_STREAM (pp, handle);
     UINT8_TO_STREAM (pp, reason);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID,  p);
+    _SEND(p);
     return (TRUE);
 }
 #endif
@@ -831,7 +833,7 @@ BOOLEAN btsnd_hcic_ble_add_device_resolving_list (UINT8 addr_type_peer, BD_ADDR 
     ARRAY_TO_STREAM (pp, irk_peer, HCIC_BLE_ENCRYT_KEY_SIZE);
     ARRAY_TO_STREAM (pp, irk_local, HCIC_BLE_ENCRYT_KEY_SIZE);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID, p);
+    _SEND(p);
 
     return (TRUE);
 }
@@ -855,7 +857,7 @@ BOOLEAN btsnd_hcic_ble_rm_device_resolving_list (UINT8 addr_type_peer, BD_ADDR b
     UINT8_TO_STREAM (pp, addr_type_peer);
     BDADDR_TO_STREAM (pp, bda_peer);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID, p);
+    _SEND(p);
 
     return (TRUE);
 }
@@ -877,7 +879,7 @@ BOOLEAN btsnd_hcic_ble_clear_resolving_list (void)
     UINT16_TO_STREAM (pp, HCI_BLE_CLEAR_RESOLVING_LIST);
     UINT8_TO_STREAM (pp, HCIC_PARAM_SIZE_BLE_CLEAR_RESOLVING_LIST);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID, p);
+    _SEND(p);
 
     return (TRUE);
 }
@@ -901,7 +903,7 @@ BOOLEAN btsnd_hcic_ble_read_resolvable_addr_peer (UINT8 addr_type_peer, BD_ADDR 
     UINT8_TO_STREAM (pp, addr_type_peer);
     BDADDR_TO_STREAM (pp, bda_peer);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID, p);
+    _SEND(p);
 
     return (TRUE);
 }
@@ -925,7 +927,7 @@ BOOLEAN btsnd_hcic_ble_read_resolvable_addr_local (UINT8 addr_type_peer, BD_ADDR
     UINT8_TO_STREAM (pp, addr_type_peer);
     BDADDR_TO_STREAM (pp, bda_peer);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID, p);
+    _SEND(p);
 
     return (TRUE);
 }
@@ -948,7 +950,7 @@ BOOLEAN btsnd_hcic_ble_set_addr_resolution_enable (UINT8 addr_resolution_enable)
     UINT8_TO_STREAM (pp, HCIC_PARAM_SIZE_BLE_SET_ADDR_RESOLUTION_ENABLE);
     UINT8_TO_STREAM (pp, addr_resolution_enable);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID, p);
+    _SEND(p);
 
     return (TRUE);
 }
@@ -971,7 +973,7 @@ BOOLEAN btsnd_hcic_ble_set_rand_priv_addr_timeout (UINT16 rpa_timout)
     UINT8_TO_STREAM (pp, HCIC_PARAM_SIZE_BLE_SET_RAND_PRIV_ADDR_TIMOUT);
     UINT16_TO_STREAM (pp, rpa_timout);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID, p);
+    _SEND(p);
 
     return (TRUE);
 }
@@ -997,7 +999,7 @@ BOOLEAN btsnd_hcic_ble_set_data_length(UINT16 conn_handle, UINT16 tx_octets, UIN
     UINT16_TO_STREAM(pp, tx_octets);
     UINT16_TO_STREAM(pp, tx_time);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID, p);
+    _SEND(p);
     return TRUE;
 }
 
@@ -1019,7 +1021,7 @@ BOOLEAN btsnd_hcic_ble_update_adv_report_flow_control (UINT16 num)
     UINT8_TO_STREAM (pp, HCIC_PARAM_SIZE_BLE_UPDATE_ADV_FLOW_CONTROL);
     UINT16_TO_STREAM (pp, num);
 
-    btu_hcif_send_cmd (LOCAL_BR_EDR_CONTROLLER_ID, p);
+    _SEND(p);
     return TRUE;
 }
 
