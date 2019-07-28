@@ -1019,13 +1019,15 @@
 #define HCI_VALID_ESCO_PKT_TYPE(t) (((((t) & ~(HCI_ESCO_PKT_TYPES_MASK_EV3       \
                                            |   HCI_ESCO_PKT_TYPES_MASK_EV4       \
                                            |   HCI_ESCO_PKT_TYPES_MASK_EV5)) == 0)) \
-                                    && ((t) != 0))/* Packet type should be one of valid but at least one should be specified */
+                                    && ((t) != 0))
 
+/* Packet type should be one of valid but at least one should be specified */
 #define HCI_VALID_ESCO_SCOPKT_TYPE(t) (((((t) & ~(HCI_ESCO_PKT_TYPES_MASK_HV1       \
                                            |      HCI_ESCO_PKT_TYPES_MASK_HV2       \
                                            |      HCI_ESCO_PKT_TYPES_MASK_HV3)) == 0)) \
                                     && ((t) != 0))
 
+/* TODO: NIF/LIZN - Why are 2_EVx and 3_EVx not included? */
 #define HCI_VALID_SCO_ALL_PKT_TYPE(t) (((((t) & ~(HCI_ESCO_PKT_TYPES_MASK_HV1       \
                                            |      HCI_ESCO_PKT_TYPES_MASK_HV2       \
                                            |      HCI_ESCO_PKT_TYPES_MASK_HV3       \
@@ -1523,6 +1525,7 @@ typedef struct {
 #define HCI_FEATURE_SWITCH_MASK         0x20
 #define HCI_FEATURE_SWITCH_OFF          0
 // temporarily disable ROLE_SWITCH since there is an issue to be fixed
+//#define HCI_SWITCH_SUPPORTED(x)         ((x)[HCI_FEATURE_SWITCH_OFF] & HCI_FEATURE_SWITCH_MASK)
 #define HCI_SWITCH_SUPPORTED(x)         (0 & ((x)[HCI_FEATURE_SWITCH_OFF] & HCI_FEATURE_SWITCH_MASK))
 
 #define HCI_FEATURE_HOLD_MODE_MASK      0x40
