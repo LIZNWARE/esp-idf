@@ -271,7 +271,7 @@ static void hci_sco_data_to_lower(BT_HDR *p_buf)
         osi_free(p_buf);
     }
 
-    bte_main_hci_send(p_buf, (UINT16)(BT_EVT_TO_LM_HCI_SCO | LOCAL_BLE_CONTROLLER_ID));
+    bte_main_hci_send(p_buf, (UINT16)(BT_EVT_TO_LM_HCI_SCO | LOCAL_BR_EDR_CONTROLLER_ID));
 }
 /*******************************************************************************
 **
