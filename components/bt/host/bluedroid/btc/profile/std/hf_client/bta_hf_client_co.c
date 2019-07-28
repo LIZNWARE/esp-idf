@@ -95,6 +95,7 @@ static UINT8 hf_inout_pkt_size;
 *******************************************************************************/
 void bta_hf_client_co_audio_state(UINT16 handle, UINT8 state, tBTA_HFP_PEER_CODEC codec)
 {
+  // TODO: NIF/LIZN - Do something with this call-out
     switch (state)
     {
     case SCO_STATE_ON:
@@ -398,6 +399,7 @@ static void bta_hf_client_decode_msbc_frame(UINT8 **data, UINT8 *length, BOOLEAN
         case OI_OK:
             bta_hf_ct_plc.first_good_frame_found = TRUE;
             sbc_plc_good_frame(&(bta_hf_ct_plc.plc_state), (int16_t *)bta_hf_client_co_cb.decode_raw_data, bta_hf_ct_plc.sbc_plc_out);
+            break;
         case OI_CODEC_SBC_NOT_ENOUGH_HEADER_DATA:
         case OI_CODEC_SBC_NOT_ENOUGH_BODY_DATA:
         case OI_CODEC_SBC_NOT_ENOUGH_AUDIO_DATA:
