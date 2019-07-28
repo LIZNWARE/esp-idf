@@ -902,6 +902,9 @@ UINT8 L2CA_SetDesireRole (UINT8 new_role)
         l2cb.desire_role = new_role;
     }
 
+    L2CAP_TRACE_WARNING("L2CA_SetDesireRole() desired:%c, disallow_switch:%d",
+                     ((l2cb.desire_role==HCI_ROLE_MASTER)?'M':'S'), l2cb.disallow_switch);
+
     return (l2cb.desire_role);
 }
 
