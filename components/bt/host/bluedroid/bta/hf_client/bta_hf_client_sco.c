@@ -29,18 +29,70 @@
 #endif
 
 #if (BTA_HF_INCLUDED == TRUE)
+
+#include "stack/btm_util_sco.h"
+
 #define BTA_HF_CLIENT_NO_EDR_ESCO  (BTM_SCO_PKT_TYPES_MASK_NO_2_EV3 | \
                                     BTM_SCO_PKT_TYPES_MASK_NO_3_EV3 | \
                                     BTM_SCO_PKT_TYPES_MASK_NO_2_EV5 | \
                                     BTM_SCO_PKT_TYPES_MASK_NO_3_EV5)
+
+
+#define _M(KIND,VARIANT...) BTM_SCO_PKT_TYPE_MASK(KIND,VARIANT)
+#define _M2(KIND) BTM_SCO_PKT_TYPE_MASK(KIND,2)
+#define _M3(KIND) BTM_SCO_PKT_TYPE_MASK(KIND,3)
+
+typedef enum tPktMask_sco_hfp
+{
+  enPktMask_sco_hfp_CVSD_SCO_Orig =  (_M(HV3)|_M2(EV3)|_M3(EV3)|_M2(EV5)|_M3(EV5)),
+  enPktMask_sco_hfp_CVSD_ESCO_Orig = (_M(HV3)|_M(EV3)|_M(EV4)|_M(EV5)|_M2(EV5)|_M3(EV5)),
+  enPktMask_sco_hfp_MSBC_ESCO_Orig = (_M(EV3)|_M3(EV3)|_M2(EV5)|_M3(EV5)),
+  enPktMask_sco_hfp_CVSD_SCO  = (_M(EV4)),
+  enPktMask_sco_hfp_CVSD_ESCO = (_M(EV4)),
+  enPktMask_sco_hfp_MSBC_ESCO = (_M(EV3)|_M3(EV3)|_M2(EV5)|_M3(EV5)),
+} PktMask_sco_hfpT;
+
+
+#if 1
+
+//---
 
 static const tBTM_ESCO_PARAMS bta_hf_client_esco_params[] = {
     /* SCO CVSD */
     {
         .rx_bw = BTM_64KBITS_RATE,
         .tx_bw = BTM_64KBITS_RATE,
-        .max_latency = 10,
+        .max_latency = 15,
         .voice_contfmt = BTM_VOICE_SETTING_CVSD,
+        .packet_types = enPktMask_sco_hfp_CVSD_ESCO,
+        .retrans_effort = BTM_ESCO_RETRANS_OFF,
+    },
+    /* ESCO CVSD */
+    {
+        .rx_bw = BTM_64KBITS_RATE,
+        .tx_bw = BTM_64KBITS_RATE,
+        .max_latency = 15,
+        .voice_contfmt = BTM_VOICE_SETTING_CVSD,
+        .packet_types = enPktMask_sco_hfp_CVSD_ESCO,
+        .retrans_effort = BTM_ESCO_RETRANS_POWER,
+    },
+    /* ESCO mSBC */
+    {
+        .rx_bw = BTM_64KBITS_RATE,
+        .tx_bw = BTM_64KBITS_RATE,
+        .max_latency = 15,
+        .voice_contfmt = BTM_VOICE_SETTING_TRANS,
+        .packet_types = enPktMask_sco_hfp_MSBC_ESCO,
+        .retrans_effort = BTM_ESCO_RETRANS_QUALITY,
+    }
+};
+#else
+static const tBTM_ESCO_PARAMS bta_hf_client_esco_params[] = {
+    /* SCO CVSD */
+    {
+        .rx_bw = BTM_64KBITS_RATE,
+        .tx_bw = BTM_64KBITS_RATE,
+        .max_latency = 10,
         .packet_types = (BTM_SCO_LINK_ONLY_MASK          |
         BTM_SCO_PKT_TYPES_MASK_NO_2_EV3 |
         BTM_SCO_PKT_TYPES_MASK_NO_3_EV3 |
@@ -54,6 +106,7 @@ static const tBTM_ESCO_PARAMS bta_hf_client_esco_params[] = {
         .tx_bw = BTM_64KBITS_RATE,
         .max_latency = 10,
         .voice_contfmt = BTM_VOICE_SETTING_CVSD,
+        // TODO: NIF/LIZN - Comment seems misleading
         /* Allow controller to use all types available except 5-slot EDR */
         .packet_types = (BTM_SCO_LINK_ALL_PKT_MASK |
         BTM_SCO_PKT_TYPES_MASK_NO_2_EV5 |
@@ -74,6 +127,7 @@ static const tBTM_ESCO_PARAMS bta_hf_client_esco_params[] = {
         .retrans_effort = BTM_ESCO_RETRANS_QUALITY,
     }
 };
+#endif
 
 enum {
     BTA_HF_CLIENT_SCO_LISTEN_E,
@@ -195,11 +249,17 @@ static void bta_hf_client_sco_conn_rsp(tBTM_ESCO_CONN_REQ_EVT_DATA *p_data)
         bta_sys_sco_use(BTA_ID_HS, 1, bta_hf_client_cb.scb.peer_addr);
 
 #if (BTM_SCO_HCI_INCLUDED == TRUE )
+
+        // FIXME: NIF/LIZN - bta_hf_client_co_audio_state does not do ANYTHING.
         bta_hf_client_co_audio_state(bta_hf_client_cb.scb.sco_idx, SCO_STATE_SETUP, 0);
+
+        // TODO: NIF/LIZN - Clarify: pcm_sample_rate is not really equal to the Rx / Tx bandwidths. 
+        // But bta_hf_client_sco_co_init doesn't do anything with those parameters anyway other than to print them.
         pcm_sample_rate = BTA_HFP_SCO_SAMP_RATE_8K;
 
         /* initialize SCO setup, no voice setting for AG, data rate <==> sample rate */
-        BTM_ConfigScoPath(bta_hf_client_sco_co_init(pcm_sample_rate, pcm_sample_rate, &codec_info, 0),
+        BTM_ConfigScoPath(
+            bta_hf_client_sco_co_init(pcm_sample_rate, pcm_sample_rate, &codec_info, 0),
             bta_hf_client_sco_read_cback, NULL, TRUE);
 #endif
     } else {
@@ -295,6 +355,16 @@ static void bta_hf_client_sco_conn_cback(UINT16 sco_idx)
             p_buf->layer_specific = bta_hf_client_cb.scb.conn_handle;
             bta_sys_sendmsg(p_buf);
         }
+        APPL_TRACE_ERROR("%s %s %s intv=%d retrans=%d txlen=%d rxlen=%d",
+                          __FUNCTION__,
+                          ((sco_data.link_type==BTM_LINK_TYPE_SCO)?"SCO":"ESCO"),
+                          ((sco_data.air_mode == BTM_SCO_AIR_MODE_CVSD)?"CVSD":"MSBC"),
+                          sco_data.tx_interval,
+                          sco_data.retrans_window,
+                          sco_data.tx_pkt_len,
+                          sco_data.rx_pkt_len
+                        );
+
     }
     /* no match found; disconnect sco, init sco variables */
     else {
@@ -411,13 +481,16 @@ static void bta_hf_client_sco_create(BOOLEAN is_orig)
                            bta_hf_client_sco_disc_cback);
     if (status == BTM_CMD_STARTED && !is_orig) {
         if (!BTM_RegForEScoEvts(bta_hf_client_cb.scb.sco_idx, bta_hf_client_esco_connreq_cback)) {
-            APPL_TRACE_DEBUG("%s SCO registration success", __FUNCTION__);
+            APPL_TRACE_API("%s SCO registration success", __FUNCTION__);
         }
     }
 
-    APPL_TRACE_API("%s: orig %d, inx 0x%04x, status 0x%x, pkt types 0x%04x",
+    char aBuf[80];
+
+    APPL_TRACE_API("%s: orig %d, inx 0x%04x, status 0x%x, pkt types 0x%04x (%d) [%s]",
                    __FUNCTION__, is_orig, bta_hf_client_cb.scb.sco_idx,
-                   status, params.packet_types);
+                   status, params.packet_types,
+                   BTM_ScoPacketTypesToString(aBuf,params.packet_types),aBuf);
 }
 
 
