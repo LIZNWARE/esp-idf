@@ -898,6 +898,7 @@ UINT8 L2CA_SetDesireRole (UINT8 new_role)
         }
     }
 
+    new_role &= HCI_ROLE_MASTER | HCI_ROLE_SLAVE;
     if (new_role == HCI_ROLE_MASTER || new_role == HCI_ROLE_SLAVE) {
         l2cb.desire_role = new_role;
     }
