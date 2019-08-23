@@ -48,8 +48,8 @@ typedef enum tPktMask_sco_hfp
   enPktMask_sco_hfp_CVSD_ESCO_Orig = (_M(HV3)|_M(EV3)|_M(EV4)|_M(EV5)|_M2(EV5)|_M3(EV5)),
   enPktMask_sco_hfp_MSBC_ESCO_Orig = (_M(EV3)|_M3(EV3)|_M2(EV5)|_M3(EV5)),
   enPktMask_sco_hfp_CVSD_SCO  = (_M(EV4)),
-  enPktMask_sco_hfp_CVSD_ESCO = (_M(EV4)),
-  enPktMask_sco_hfp_MSBC_ESCO = (_M(EV3)|_M3(EV3)|_M2(EV5)|_M3(EV5)),
+  enPktMask_sco_hfp_CVSD_ESCO = _M(EV4), //(_M(EV5)|_M2(EV5)|_M3(EV5)), //(_M(EV4)|_M(EV5)|_M2(EV3)|_M3(EV3)|_M2(EV5)|_M3(EV5)),
+  enPktMask_sco_hfp_MSBC_ESCO =  _M(EV4), //(_M(EV5)|_M2(EV5)|_M3(EV5)),
 } PktMask_sco_hfpT;
 
 
@@ -62,7 +62,7 @@ static const tBTM_ESCO_PARAMS bta_hf_client_esco_params[] = {
     {
         .rx_bw = BTM_64KBITS_RATE,
         .tx_bw = BTM_64KBITS_RATE,
-        .max_latency = 15,
+        .max_latency = 14,
         .voice_contfmt = BTM_VOICE_SETTING_CVSD,
         .packet_types = enPktMask_sco_hfp_CVSD_ESCO,
         .retrans_effort = BTM_ESCO_RETRANS_OFF,
@@ -71,10 +71,10 @@ static const tBTM_ESCO_PARAMS bta_hf_client_esco_params[] = {
     {
         .rx_bw = BTM_64KBITS_RATE,
         .tx_bw = BTM_64KBITS_RATE,
-        .max_latency = 15,
+        .max_latency = 14,
         .voice_contfmt = BTM_VOICE_SETTING_CVSD,
         .packet_types = enPktMask_sco_hfp_CVSD_ESCO,
-        .retrans_effort = BTM_ESCO_RETRANS_POWER,
+        .retrans_effort = BTM_ESCO_RETRANS_OFF,
     },
     /* ESCO mSBC */
     {
@@ -83,7 +83,7 @@ static const tBTM_ESCO_PARAMS bta_hf_client_esco_params[] = {
         .max_latency = 15,
         .voice_contfmt = BTM_VOICE_SETTING_TRANS,
         .packet_types = enPktMask_sco_hfp_MSBC_ESCO,
-        .retrans_effort = BTM_ESCO_RETRANS_QUALITY,
+        .retrans_effort = BTM_ESCO_RETRANS_OFF,
     }
 };
 #else
@@ -355,15 +355,21 @@ static void bta_hf_client_sco_conn_cback(UINT16 sco_idx)
             p_buf->layer_specific = bta_hf_client_cb.scb.conn_handle;
             bta_sys_sendmsg(p_buf);
         }
-        APPL_TRACE_ERROR("%s %s %s intv=%d retrans=%d txlen=%d rxlen=%d",
+        {
+          char aBuf[80];
+          UINT16 packet_types = BTM_ReadScoPacketTypes(sco_idx);
+        APPL_TRACE_ERROR("%s %s %s intv=%d retrans=%d txlen=%d rxlen=%d"
+                         " pkt_types 0x%04x (%d) [%s]",
                           __FUNCTION__,
                           ((sco_data.link_type==BTM_LINK_TYPE_SCO)?"SCO":"ESCO"),
                           ((sco_data.air_mode == BTM_SCO_AIR_MODE_CVSD)?"CVSD":"MSBC"),
                           sco_data.tx_interval,
                           sco_data.retrans_window,
                           sco_data.tx_pkt_len,
-                          sco_data.rx_pkt_len
+                          sco_data.rx_pkt_len,
+                          packet_types, BTM_ScoPacketTypesToString(aBuf,packet_types),aBuf
                         );
+        }
 
     }
     /* no match found; disconnect sco, init sco variables */
