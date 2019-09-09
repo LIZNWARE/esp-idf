@@ -431,6 +431,7 @@ bool config_save(const config_t *config, const char *filename)
         }
     }
     buf[w_cnt_total] = '\0';
+    printf("KEYHERE %s\r\n",buf);
     if (w_cnt_total < CONFIG_FILE_MAX_SIZE) {
         snprintf(keyname, keyname_bufsz, "%s%d", CONFIG_KEY, 0);
         err = nvs_set_blob(fp, keyname, buf, w_cnt_total);
