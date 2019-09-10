@@ -37,6 +37,9 @@
 
 #if (defined BLE_INCLUDED) && (BLE_INCLUDED == TRUE)
 
+#define DBG_CE_LEN   12
+#define DBG_PROLOG(...) //{ min_ce_len = DBG_CE_LEN; max_ce_len = DBG_CE_LEN; }
+
 #define _SEND(P) btu_hcif_send_cmd(LOCAL_BLE_CONTROLLER_ID,P)
 
 BOOLEAN btsnd_hcic_ble_set_local_used_feat (UINT8 feat_set[8])
@@ -293,6 +296,8 @@ BOOLEAN btsnd_hcic_ble_create_ll_conn (UINT16 scan_int, UINT16 scan_win,
                                        UINT16 conn_latency, UINT16 conn_timeout,
                                        UINT16 min_ce_len, UINT16 max_ce_len)
 {
+    DBG_PROLOG();
+
     BT_HDR *p;
     UINT8 *pp;
 
@@ -423,6 +428,8 @@ BOOLEAN btsnd_hcic_ble_upd_ll_conn_params (UINT16 handle,
         UINT16 conn_latency, UINT16 conn_timeout,
         UINT16 min_ce_len, UINT16 max_ce_len)
 {
+    DBG_PROLOG();
+
     BT_HDR *p;
     UINT8 *pp;
 
@@ -758,6 +765,8 @@ BOOLEAN btsnd_hcic_ble_rc_param_req_reply(  UINT16 handle,
         UINT16 conn_latency, UINT16 conn_timeout,
         UINT16 min_ce_len, UINT16 max_ce_len  )
 {
+    DBG_PROLOG();
+
     BT_HDR *p;
     UINT8 *pp;
 
