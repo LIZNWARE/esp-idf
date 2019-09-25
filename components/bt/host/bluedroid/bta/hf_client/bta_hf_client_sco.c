@@ -32,24 +32,34 @@
 
 #include "stack/btm_util_sco.h"
 
-#define BTA_HF_CLIENT_NO_EDR_ESCO  (BTM_SCO_PKT_TYPES_MASK_NO_2_EV3 | \
-                                    BTM_SCO_PKT_TYPES_MASK_NO_3_EV3 | \
-                                    BTM_SCO_PKT_TYPES_MASK_NO_2_EV5 | \
-                                    BTM_SCO_PKT_TYPES_MASK_NO_3_EV5)
+#define BTA_HF_CLIENT_NO_EDR_ESCO \
+  (\
+      BTM_SCO_PKT_TYPES_MASK_NO_2_EV3 | \
+      BTM_SCO_PKT_TYPES_MASK_NO_3_EV3 | \
+      BTM_SCO_PKT_TYPES_MASK_NO_2_EV5 | \
+      BTM_SCO_PKT_TYPES_MASK_NO_3_EV5\
+  )
+//---
 
 
-#define _M(KIND,VARIANT...) BTM_SCO_PKT_TYPE_MASK(KIND,VARIANT)
-#define _M2(KIND) BTM_SCO_PKT_TYPE_MASK(KIND,2)
-#define _M3(KIND) BTM_SCO_PKT_TYPE_MASK(KIND,3)
+#define _M(KIND)               BTM_SCO_PKT_TYPE_MASK_V(KIND)
+#define _M_NO(KIND,VARIANT...) BTM_SCO_PKT_TYPE_MASK_V(KIND,_NO_##VARIANT)
+
+#define _M_NO_EDR BTA_HF_CLIENT_NO_EDR_ESCO
+
+
+#define PKT_MASK  (_M_NO_EDR & ~_M_NO(EV3,2))
+
+
 
 typedef enum tPktMask_sco_hfp
 {
-  enPktMask_sco_hfp_CVSD_SCO_Orig =  (_M(HV3)|_M2(EV3)|_M3(EV3)|_M2(EV5)|_M3(EV5)),
-  enPktMask_sco_hfp_CVSD_ESCO_Orig = (_M(HV3)|_M(EV3)|_M(EV4)|_M(EV5)|_M2(EV5)|_M3(EV5)),
-  enPktMask_sco_hfp_MSBC_ESCO_Orig = (_M(EV3)|_M3(EV3)|_M2(EV5)|_M3(EV5)),
-  enPktMask_sco_hfp_CVSD_SCO  = (_M(EV4)),
-  enPktMask_sco_hfp_CVSD_ESCO = _M(EV4), //(_M(EV5)|_M2(EV5)|_M3(EV5)), //(_M(EV4)|_M(EV5)|_M2(EV3)|_M3(EV3)|_M2(EV5)|_M3(EV5)),
-  enPktMask_sco_hfp_MSBC_ESCO =  _M(EV4), //(_M(EV5)|_M2(EV5)|_M3(EV5)),
+  enPktMask_sco_hfp_CVSD_SCO_Orig =  (_M(HV3)|_M_NO_EDR),
+  enPktMask_sco_hfp_CVSD_ESCO_Orig = (_M(HV3)|_M(EV3)|_M(EV4)|_M(EV5)|_M_NO(EV5,2)|_M_NO(EV5,3)),
+  enPktMask_sco_hfp_MSBC_ESCO_Orig = (_M(EV3)|_M_NO(EV3,3)|_M_NO(EV5,3)|_M_NO(EV5,3)),
+  enPktMask_sco_hfp_CVSD_SCO  = PKT_MASK,
+  enPktMask_sco_hfp_CVSD_ESCO = PKT_MASK,
+  enPktMask_sco_hfp_MSBC_ESCO = PKT_MASK,
 } PktMask_sco_hfpT;
 
 
@@ -356,7 +366,6 @@ static void bta_hf_client_sco_conn_cback(UINT16 sco_idx)
             bta_sys_sendmsg(p_buf);
         }
         {
-          char aBuf[80];
           UINT16 packet_types = BTM_ReadScoPacketTypes(sco_idx);
         APPL_TRACE_ERROR("%s %s %s intv=%d retrans=%d txlen=%d rxlen=%d"
                          " pkt_types 0x%04x (%d) [%s]",
@@ -367,7 +376,7 @@ static void bta_hf_client_sco_conn_cback(UINT16 sco_idx)
                           sco_data.retrans_window,
                           sco_data.tx_pkt_len,
                           sco_data.rx_pkt_len,
-                          packet_types, BTM_ScoPacketTypesToString(aBuf,packet_types),aBuf
+                          packet_types, 0, "<not parsed>"
                         );
         }
 

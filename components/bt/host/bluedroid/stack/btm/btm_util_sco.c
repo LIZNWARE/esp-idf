@@ -29,15 +29,17 @@ typedef struct tMask2StringMap
     const char* cszString;
 } Mask2StringMapT;
 
+
+
 #define _S(X,VARIANT) #VARIANT #X
-#define _MMAP(X,VARIANT...) {.mMask = BTM_SCO_PKT_TYPE_MASK(X,VARIANT), .cszString = _S(X,VARIANT)}
+#define _MMAP(X,VARIANT...) {.mMask = BTM_SCO_PKT_TYPE_MASK_V(X,VARIANT), .cszString = _S(X,VARIANT)}
 
 const Mask2StringMapT aPktTypeStringMap[] =
 {
-    _MMAP(EV5,3),
-    _MMAP(EV5,2),
-    _MMAP(EV3,3),
-    _MMAP(EV3,2),
+    _MMAP(EV5,_NO_3),
+    _MMAP(EV5,_NO_2),
+    _MMAP(EV3,_NO_3),
+    _MMAP(EV3,_NO_2),
 
     _MMAP(EV5),
     _MMAP(EV4),
@@ -54,6 +56,10 @@ const Mask2StringMapT aPktTypeStringMap[] =
 
 UINT8 BTM_ScoPacketTypesToString (char* p_strbuf, UINT16 pkttype_mask)
 {
+#if 0
+  if(p_strbuf) *p_strbuf = 0;
+  return 0;
+#else
   int nRes = 0;
   char* pD = 0;
   long  mMask = pkttype_mask;
@@ -93,4 +99,5 @@ UINT8 BTM_ScoPacketTypesToString (char* p_strbuf, UINT16 pkttype_mask)
     *pD = 0;
   }
   return nRes;
+#endif
 }

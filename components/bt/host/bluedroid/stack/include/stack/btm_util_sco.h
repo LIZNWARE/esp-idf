@@ -21,11 +21,7 @@
  **/
 #include "btm_api.h"
 
-
-#define BTM_SCO_PKT_TYPE_MASK_(KIND) (BTM_SCO_PKT_TYPES_MASK_##KIND)
-#define BTM_SCO_PKT_TYPE_MASK_2(KIND) (BTM_SCO_PKT_TYPES_MASK_NO_2_##KIND)
-#define BTM_SCO_PKT_TYPE_MASK_3(KIND) (BTM_SCO_PKT_TYPES_MASK_NO_3_##KIND)
-#define BTM_SCO_PKT_TYPE_MASK(KIND,VARIANT...) BTM_SCO_PKT_TYPE_MASK_##VARIANT(KIND)
+#define BTM_SCO_PKT_TYPE_MASK_V(KIND,VARIANT...) BTM_SCO_PKT_TYPES_MASK##VARIANT##_##KIND
 
 
 /*******************************************************************************
