@@ -48,7 +48,9 @@
 #define _M_NO_EDR BTA_HF_CLIENT_NO_EDR_ESCO
 
 
-#define PKT_MASK  (_M_NO_EDR & ~_M_NO(EV3,2))
+//#define PKT_MASK  (_M_NO_EDR & ~_M_NO(EV3,2))
+//#define PKT_MASK  (_M_NO_EDR | _M(EV4))
+#define PKT_MASK    _M(EV4)
 
 
 
@@ -90,7 +92,7 @@ static const tBTM_ESCO_PARAMS bta_hf_client_esco_params[] = {
     {
         .rx_bw = BTM_64KBITS_RATE,
         .tx_bw = BTM_64KBITS_RATE,
-        .max_latency = 15,
+        .max_latency = 25,
         .voice_contfmt = BTM_VOICE_SETTING_TRANS,
         .packet_types = enPktMask_sco_hfp_MSBC_ESCO,
         .retrans_effort = BTM_ESCO_RETRANS_OFF,
@@ -366,9 +368,11 @@ static void bta_hf_client_sco_conn_cback(UINT16 sco_idx)
             bta_sys_sendmsg(p_buf);
         }
         {
-          UINT16 packet_types = BTM_ReadScoPacketTypes(sco_idx);
+          UINT16 mPktL   = BTM_ReadScoPacketTypes(sco_idx); char aPktL[80] = {0,}; int nPktL = BTM_ScoPacketTypesToString(aPktL,mPktL);
+          UINT16 mPktD   = BTM_ReadDeviceScoPacketTypes();  char aPktD[80] = {0,}; int nPktD = BTM_ScoPacketTypesToString(aPktD,mPktD);
         APPL_TRACE_ERROR("%s %s %s intv=%d retrans=%d txlen=%d rxlen=%d"
-                         " pkt_types 0x%04x (%d) [%s]",
+                         "\r\n lnk 0x%04x (%d) [%s]"
+                         "\r\n dev 0x%04x (%d) [%s]",
                           __FUNCTION__,
                           ((sco_data.link_type==BTM_LINK_TYPE_SCO)?"SCO":"ESCO"),
                           ((sco_data.air_mode == BTM_SCO_AIR_MODE_CVSD)?"CVSD":"MSBC"),
@@ -376,7 +380,8 @@ static void bta_hf_client_sco_conn_cback(UINT16 sco_idx)
                           sco_data.retrans_window,
                           sco_data.tx_pkt_len,
                           sco_data.rx_pkt_len,
-                          packet_types, 0, "<not parsed>"
+                          mPktL, nPktL, aPktL,
+                          mPktD, nPktD, aPktD
                         );
         }
 
