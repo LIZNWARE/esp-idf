@@ -166,8 +166,13 @@ typedef enum {
     ESP_GAP_BLE_READ_RSSI_COMPLETE_EVT,                     /*!< When read the rssi complete, the event comes */
     ESP_GAP_BLE_UPDATE_WHITELIST_COMPLETE_EVT,              /*!< When add or remove whitelist complete, the event comes */
     ESP_GAP_BLE_UPDATE_DUPLICATE_EXCEPTIONAL_LIST_COMPLETE_EVT,  /*!< When update duplicate exceptional list complete, the event comes */
+    ESP_GAP_BLE_SET_CHANNELS_EVT,                           /*!< When set BLE channels complete, the event comes */
     ESP_GAP_BLE_EVT_MAX,
 } esp_gap_ble_cb_event_t;
+
+#define ESP_GAP_BLE_CHANNELS_LEN     5
+typedef uint8_t esp_gap_ble_channels[ESP_GAP_BLE_CHANNELS_LEN];
+
 /// This is the old name, just for backwards compatibility
 #define ESP_GAP_BLE_ADD_WHITELIST_COMPLETE_EVT ESP_GAP_BLE_UPDATE_WHITELIST_COMPLETE_EVT
 
@@ -377,7 +382,7 @@ typedef struct {
                                                         advertising reports for each packet received */
 } esp_ble_scan_params_t;
 
-/// connection parameters information 
+/// connection parameters information
 typedef struct {
     uint16_t             interval;                  /*!< connection interval */
     uint16_t             latency;                   /*!< Slave latency for the connection in number of connection events. Range: 0x0000 to 0x01F3 */
@@ -598,7 +603,7 @@ typedef enum {
 typedef enum {
     ESP_BLE_DUPLICATE_SCAN_EXCEPTIONAL_INFO_ADV_ADDR       = 0,  /*!< BLE advertising address , device info will be added into ESP_BLE_DUPLICATE_SCAN_EXCEPTIONAL_ADDR_LIST */
     ESP_BLE_DUPLICATE_SCAN_EXCEPTIONAL_INFO_MESH_LINK_ID,        /*!< BLE mesh link ID, it is for BLE mesh, device info will be added into ESP_BLE_DUPLICATE_SCAN_EXCEPTIONAL_MESH_LINK_ID_LIST */
-    ESP_BLE_DUPLICATE_SCAN_EXCEPTIONAL_INFO_MESH_BEACON_TYPE,    /*!< BLE mesh beacon AD type, the format is | Len | 0x2B | Beacon Type | Beacon Data | */     
+    ESP_BLE_DUPLICATE_SCAN_EXCEPTIONAL_INFO_MESH_BEACON_TYPE,    /*!< BLE mesh beacon AD type, the format is | Len | 0x2B | Beacon Type | Beacon Data | */
     ESP_BLE_DUPLICATE_SCAN_EXCEPTIONAL_INFO_MESH_PROV_SRV_ADV,   /*!< BLE mesh provisioning service uuid, the format is | 0x02 | 0x01 | flags | 0x03 | 0x03 | 0x1827 | .... |` */
     ESP_BLE_DUPLICATE_SCAN_EXCEPTIONAL_INFO_MESH_PROXY_SRV_ADV,  /*!< BLE mesh adv with proxy service uuid, the format is | 0x02 | 0x01 | flags | 0x03 | 0x03 | 0x1828 | .... |` */
 } esp_ble_duplicate_exceptional_info_type_t;
@@ -769,6 +774,12 @@ typedef union {
         uint16_t         length;                     /*!< The length of device_info */
         esp_duplicate_info_t device_info;           /*!< device information, when subcode is ESP_BLE_DUPLICATE_EXCEPTIONAL_LIST_CLEAN, the value is invalid */
     } update_duplicate_exceptional_list_cmpl;       /*!< Event parameter of ESP_GAP_BLE_UPDATE_DUPLICATE_EXCEPTIONAL_LIST_COMPLETE_EVT */
+    /**
+     * @brief ESP_GAP_BLE_SET_CHANNELS_EVT
+     */
+    struct ble_set_channels_evt_param {
+        esp_bt_status_t stat;                       /*!< BLE set channel status */
+    } ble_set_channels;                             /*!< Event parameter of ESP_GAP_BLE_SET_CHANNELS_EVT */
 } esp_ble_gap_cb_param_t;
 
 /**
@@ -1254,6 +1265,22 @@ esp_err_t esp_ble_gap_disconnect(esp_bd_addr_t remote_device);
 *
 */
 esp_err_t esp_ble_get_current_conn_params(esp_bd_addr_t bd_addr, esp_gap_conn_params_t *conn_params);
+
+/**
+* @brief            BLE set channels
+*
+* @param[in]        channles :   The n th such field (in the range 0 to 36) contains the value for the link layer channel index n.
+*                                Channel n is bad = 0.
+*                                Channel n is unknown = 1.
+*                                The most significant bits are reserved and shall be set to 0.
+*                                At least one channel shall be marked as unknown.
+*
+* @return           - ESP_OK : success
+*                   - ESP_ERR_INVALID_STATE: if bluetooth stack is not yet enabled
+*                   - other  : failed
+*
+*/
+esp_err_t esp_gap_ble_set_channels(esp_gap_ble_channels channels);
 
 #ifdef __cplusplus
 }

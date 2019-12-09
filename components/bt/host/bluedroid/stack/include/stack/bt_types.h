@@ -356,6 +356,8 @@ typedef UINT8 COF[COF_LEN];                 /* ciphering offset number */
 
 #define AFH_CHANNELS_LEN    10
 typedef UINT8 AFH_CHANNELS[AFH_CHANNELS_LEN];
+#define BLE_CHANNELS_LEN    5
+typedef UINT8 BLE_CHANNELS[BLE_CHANNELS_LEN];
 
 typedef struct {
     UINT8               qos_flags;          /* TBD */
