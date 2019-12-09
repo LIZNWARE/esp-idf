@@ -48,9 +48,9 @@
 #define _M_NO_EDR BTA_HF_CLIENT_NO_EDR_ESCO
 
 
-//#define PKT_MASK  (_M_NO_EDR & ~_M_NO(EV3,2))
+#define PKT_MASK  (_M_NO_EDR & ~_M_NO(EV3,2))| _M(EV4)
 //#define PKT_MASK  (_M_NO_EDR | _M(EV4))
-#define PKT_MASK    _M(EV4)
+//#define PKT_MASK    _M(EV4)
 
 
 
@@ -65,7 +65,7 @@ typedef enum tPktMask_sco_hfp
 } PktMask_sco_hfpT;
 
 
-#if 1
+#if 0
 
 //---
 
