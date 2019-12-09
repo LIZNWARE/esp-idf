@@ -231,7 +231,7 @@ void esp_log_write(esp_log_level_t level, const char* tag, const char* format, .
 #define LOG_COLOR_W       LOG_COLOR(LOG_COLOR_BROWN)
 #define LOG_COLOR_I       LOG_COLOR(LOG_COLOR_GREEN)
 #define LOG_COLOR_D
-#define LOG_COLOR_V
+#define LOG_COLOR_V       LOG_COLOR(LOG_COLOR_CYAN)
 #else //CONFIG_LOG_COLORS
 #define LOG_COLOR_E
 #define LOG_COLOR_W
