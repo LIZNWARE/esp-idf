@@ -37,7 +37,7 @@
 
 #define HCI_GET_CMD_BUF(paramlen)       ((BT_HDR *)osi_malloc(HCIC_PREAMBLE_SIZE + sizeof(BT_HDR) + paramlen))
 
-#define _SEND(P) btu_hcif_send_cmd(LOCAL_BLE_CONTROLLER_ID,P)
+#define _SEND(P) btu_hcif_send_cmd(LOCAL_BR_EDR_CONTROLLER_ID,P)
 
 BOOLEAN btsnd_hcic_inquiry(const LAP inq_lap, UINT8 duration, UINT8 response_cnt)
 {
