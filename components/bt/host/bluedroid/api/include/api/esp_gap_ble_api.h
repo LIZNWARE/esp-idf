@@ -1280,7 +1280,7 @@ esp_err_t esp_ble_get_current_conn_params(esp_bd_addr_t bd_addr, esp_gap_conn_pa
 *                   - other  : failed
 *
 */
-esp_err_t esp_gap_ble_set_channels(esp_gap_ble_channels channels);
+esp_err_t esp_gap_ble_set_channels(const esp_gap_ble_channels channels);
 
 #ifdef __cplusplus
 }

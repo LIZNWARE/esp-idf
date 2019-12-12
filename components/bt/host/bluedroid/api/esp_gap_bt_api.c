@@ -380,7 +380,7 @@ esp_err_t esp_bt_gap_ssp_confirm_reply(esp_bd_addr_t bd_addr, bool accept)
 
 #endif /*(BT_SSP_INCLUDED == TRUE)*/
 
-esp_err_t esp_bt_gap_set_afh_channels(esp_bt_gap_afh_channels channels)
+esp_err_t esp_bt_gap_set_afh_channels(const esp_bt_gap_afh_channels channels)
 {
     btc_msg_t msg;
     btc_gap_bt_args_t arg;

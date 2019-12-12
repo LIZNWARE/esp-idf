@@ -220,7 +220,7 @@ typedef enum {
 #define ESP_BT_GAP_MIN_INQ_LEN                (0x01)  /*!< Minimum inquiry duration, unit is 1.28s */
 #define ESP_BT_GAP_MAX_INQ_LEN                (0x30)  /*!< Maximum inquiry duration, unit is 1.28s */
 
-/// A2DP state callback parameters
+/// BT GAP callback parameters
 typedef union {
     /**
      * @brief ESP_BT_GAP_DISC_RES_EVT
@@ -663,7 +663,7 @@ esp_err_t esp_bt_gap_ssp_confirm_reply(esp_bd_addr_t bd_addr, bool accept);
 *                   - other  : failed
 *
 */
-esp_err_t esp_bt_gap_set_afh_channels(esp_bt_gap_afh_channels channles);
+esp_err_t esp_bt_gap_set_afh_channels(const esp_bt_gap_afh_channels channels);
 
 #ifdef __cplusplus
 }
