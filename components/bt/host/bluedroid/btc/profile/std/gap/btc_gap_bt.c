@@ -809,6 +809,7 @@ void btc_gap_bt_arg_deep_free(btc_msg_t *msg)
     case BTC_GAP_BT_ACT_REMOVE_BOND_DEVICE:
     case BTC_GAP_BT_ACT_PIN_REPLY:
     case BTC_GAP_BT_ACT_SET_PIN_TYPE:
+    case BTC_GAP_BT_ACT_SET_AFH_CHANNELS:
         break;
 #if (BT_SSP_INCLUDED == TRUE)
     case BTC_GAP_BT_ACT_PASSKEY_REPLY:
@@ -901,6 +902,7 @@ void btc_gap_bt_call_handler(btc_msg_t *msg)
 
     case BTC_GAP_BT_ACT_SET_AFH_CHANNELS: {
         btc_gap_bt_set_afh_channels(arg);
+        break;
     }
     default:
         break;
