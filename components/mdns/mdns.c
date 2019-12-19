@@ -1287,7 +1287,7 @@ static void _mdns_create_answer_from_parsed_packet(mdns_parsed_packet_t * parsed
                 }
             } else if (q->type == MDNS_TYPE_SDPTR) {
                 shared = true;
-                if (!_mdns_alloc_answer(&packet->answers, MDNS_TYPE_PTR, service->service, false, false)) {
+                if (!_mdns_alloc_answer(&packet->answers, MDNS_TYPE_SDPTR, service->service, false, false)) {
                     _mdns_free_tx_packet(packet);
                     return;
                 }
@@ -5015,13 +5015,8 @@ void mdns_debug_packet(const uint8_t * data, size_t len)
                 }
                 _mdns_dbg_printf("\n");
             } else if (type == MDNS_TYPE_AAAA) {
-<<<<<<< HEAD
-                ip6_addr_t ip6;
-                memcpy(&ip6, data_ptr, MDNS_ANSWER_AAAA_SIZE);
-=======
                 esp_ip6_addr_t ip6;
                 memcpy(&ip6, data_ptr, sizeof(esp_ip6_addr_t));
->>>>>>> mdns: update mdns to use esp-netif for mdns supported services such as STA, AP, ETH
                 _mdns_dbg_printf(IPV6STR "\n", IPV62STR(ip6));
             } else if (type == MDNS_TYPE_A) {
                 esp_ip4_addr_t ip;

@@ -63,6 +63,8 @@ typedef struct {
     void                        *user_context;
     int                         network_timeout_ms;
     char                        *subprotocol;
+    char                        *user_agent;
+    char                        *headers;
 } websocket_config_storage_t;
 
 typedef enum {
@@ -179,6 +181,16 @@ static esp_err_t esp_websocket_client_set_config(esp_websocket_client_handle_t c
         cfg->subprotocol = strdup(config->subprotocol);
         ESP_WS_CLIENT_MEM_CHECK(TAG, cfg->subprotocol, return ESP_ERR_NO_MEM);
     }
+    if (config->user_agent) {
+        free(cfg->user_agent);
+        cfg->user_agent = strdup(config->user_agent);
+        ESP_WS_CLIENT_MEM_CHECK(TAG, cfg->user_agent, return ESP_ERR_NO_MEM);
+    }
+    if (config->headers) {
+        free(cfg->headers);
+        cfg->headers = strdup(config->headers);
+        ESP_WS_CLIENT_MEM_CHECK(TAG, cfg->headers, return ESP_ERR_NO_MEM);
+    }
 
     cfg->network_timeout_ms = WEBSOCKET_NETWORK_TIMEOUT_MS;
     cfg->user_context = config->user_context;
@@ -207,6 +219,8 @@ static esp_err_t esp_websocket_client_destroy_config(esp_websocket_client_handle
     free(cfg->username);
     free(cfg->password);
     free(cfg->subprotocol);
+    free(cfg->user_agent);
+    free(cfg->headers);
     memset(cfg, 0, sizeof(websocket_config_storage_t));
     free(client->config);
     client->config = NULL;
@@ -220,6 +234,12 @@ static void set_websocket_transport_optional_settings(esp_websocket_client_handl
     }
     if (trans && client->config->subprotocol) {
         esp_transport_ws_set_subprotocol(trans, client->config->subprotocol);
+    }
+    if (trans && client->config->user_agent) {
+        esp_transport_ws_set_user_agent(trans, client->config->user_agent);
+    }
+    if (trans && client->config->headers) {
+        esp_transport_ws_set_headers(trans, client->config->headers);
     }
 }
 
@@ -606,14 +626,14 @@ static int esp_websocket_client_send_with_opcode(esp_websocket_client_handle_t c
         goto unlock_and_return;
     }
 
-
     while (widx < len) {
         if (need_write > client->buffer_size) {
             need_write = client->buffer_size;
         }
         memcpy(client->tx_buffer, data + widx, need_write);
         // send with ws specific way and specific opcode
-        wlen = esp_transport_ws_send_raw(client->transport, opcode, (char *)client->tx_buffer, need_write, timeout);
+        wlen = esp_transport_ws_send_raw(client->transport, opcode, (char *)client->tx_buffer, need_write,
+                                        (timeout==portMAX_DELAY)? -1 : timeout * portTICK_PERIOD_MS);
         if (wlen <= 0) {
             ret = wlen;
             ESP_LOGE(TAG, "Network error: esp_transport_write() returned %d, errno=%d", ret, errno);
