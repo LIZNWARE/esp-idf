@@ -360,6 +360,7 @@ static void btc_dm_auth_cmpl_evt (tBTA_DM_AUTH_CMPL *p_auth_cmpl)
         case HCI_ERR_AUTH_FAILURE:
         case HCI_ERR_KEY_MISSING:
             btc_storage_remove_bonded_device(&bd_addr);
+            // No break
         case HCI_ERR_HOST_REJECT_SECURITY:
         case HCI_ERR_ENCRY_MODE_NOT_ACCEPTABLE:
         case HCI_ERR_UNIT_KEY_USED:
