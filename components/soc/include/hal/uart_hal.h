@@ -124,6 +124,17 @@ typedef struct {
  */
 #define uart_hal_is_tx_idle(hal)  uart_ll_is_tx_idle((hal)->dev)
 
+
+/**
+ * @brief Get the rxfifo length(in bytes)
+ *
+ * @param  hal Context of the HAL layer
+ *
+ * @return UART rxfifo fill length
+ */
+#define uart_hal_get_rxfifo_len(hal)  uart_ll_get_rxfifo_len((hal)->dev)
+
+
 /**
  * @brief  Read data from the UART rxfifo
  *

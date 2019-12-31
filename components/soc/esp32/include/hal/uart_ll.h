@@ -246,6 +246,7 @@ static inline uint32_t uart_ll_get_rxfifo_len(uart_dev_t *hw)
  */
 static inline uint32_t uart_ll_get_txfifo_len(uart_dev_t *hw)
 {
+  // TODO: NIF/LIZN Allow variable size fifo as mentioned in documentation
     return UART_LL_FIFO_DEF_LEN - hw->status.txfifo_cnt;
 }
 

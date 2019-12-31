@@ -106,12 +106,13 @@ typedef struct {
     bool coll_det_flg;                  /*!< UART collision detection flag */
 
     //rx parameters
-    int rx_buffered_len;                  /*!< UART cached data length */
+    int rx_buffered_len;                /*!< UART cached data length */
     SemaphoreHandle_t rx_mux;           /*!< UART RX data mutex*/
     int rx_buf_size;                    /*!< RX ring buffer size */
     RingbufHandle_t rx_ring_buf;        /*!< RX ring buffer handler*/
     bool rx_buffer_full_flg;            /*!< RX ring buffer full flag. */
     int rx_cur_remain;                  /*!< Data number that waiting to be read out in ring buffer item*/
+    int rx_cur_event_size;              /*!< NIF/LIZN: Number of bytes transferred to ring buffer prior to event*/
     uint8_t* rx_ptr;                    /*!< pointer to the current data in ring buffer*/
     uint8_t* rx_head_ptr;               /*!< pointer to the head of RX item*/
     uint8_t rx_data_buf[UART_FIFO_LEN]; /*!< Data buffer to stash FIFO data*/
@@ -707,11 +708,20 @@ do { \
   uart_intr_status &= ~INTR_MASK_DEF(MASK); \
   uart_hal_clr_intsts_mask(pHal, INTR_MASK_DEF(MASK)); \
 //---
+#define INTR_CLR_IF_SET_I(MASK...) \
+  uint32_t m = uart_intr_status & INTR_MASK_DEF(MASK); \
+  if(m) {uart_intr_status &= ~m; uart_hal_clr_intsts_mask(pHal,m); }\
+//---
 #define INTR_DISABLE_I(MASK...) \
   uart_hal_disable_intr_mask(pHal, INTR_MASK_DEF(MASK)); \
 //---
 #define INTR_ENABLE_I(MASK...) \
   uart_hal_ena_intr_mask(pHal, INTR_MASK_DEF(MASK)); \
+//---
+#define INTR_GET_FLAGS(DUMMY...) \
+  uart_intr_status = uart_hal_get_intsts_mask(pHal); \
+  rx_fifo_len_on_intr = uart_hal_get_rxfifo_len(pHal); \
+  rx_fifo_len         = 0; \
 //---
 #define INTR_RST_FIFO_I(DUMMY...) \
   uart_hal_rxfifo_rst(pHal);
@@ -733,13 +743,63 @@ do { \
     INTR_CRIT(INTR_ENABLE_I(MASK)) \
 )
 
+#define INTR_EVENT_SET(EVENT,SIZE...) INTR_WRAPDO(\
+  if(uart_event.type != UART_EVENT_MAX) ESP_EARLY_LOGE(UART_TAG, "Logic error. Event overwrite"); \
+  uart_event.type = EVENT; uart_event.size = SIZE+0;\
+)
+
+#define INTR_EVENT_RXFIFO_SET(EVENT) INTR_WRAPDO(\
+  if(uart_event.type != UART_EVENT_MAX) ESP_EARLY_LOGE(UART_TAG, "Logic error. Event overwrite"); \
+  uart_event.type = EVENT; \
+  uart_event.size = p_uart->rx_cur_event_size; \
+  int rx_extra = rx_fifo_len - rx_fifo_len_on_intr; \
+  if(rx_extra>0) { \
+    uart_event.size -= rx_extra; \
+    p_uart->rx_cur_event_size = rx_extra; \
+  } \
+  else \
+  { \
+    p_uart->rx_cur_event_size = 0; \
+  } \
+  rx_fifo_len_on_intr = rx_fifo_len; \
+)
+
+#define INTR_EVENT_RXFIFO_FLUSH_SET(EVENT) INTR_WRAPDO(\
+  if(uart_event.type != UART_EVENT_MAX) ESP_EARLY_LOGE(UART_TAG, "Logic error. Event overwrite"); \
+  uart_event.type = EVENT; \
+  uart_event.size = p_uart->rx_cur_event_size; \
+  p_uart->rx_cur_event_size = 0; \
+)
+
+
+#define INTR_EVENT_MODIFY(EVENT) INTR_WRAPDO(uart_event.type = EVENT;)
+
+#define INTR_EVENT_EMIT() INTR_WRAPDO(\
+  if( uart_event.type != UART_EVENT_MAX ) { \
+    if (p_uart->xQueueUart) { \
+      if (pdFALSE == xQueueSendFromISR(p_uart->xQueueUart, (void * )&uart_event, &HPTaskAwoken)) { \
+        ESP_EARLY_LOGV(UART_TAG, "UART%d event queue full",uart_num); \
+      } \
+    } \
+    uart_event.type = UART_EVENT_MAX; uart_event.size=0;\
+  } \
+)
+
+#define INTR_LOOP_CHECK() INTR_WRAPDO(\
+  if(uart_intr_status == 0) continue; \
+  INTR_EVENT_EMIT(); \
+)
 
 //internal isr handler for default driver code.
 static void UART_ISR_ATTR uart_rx_intr_handler_default(void *param)
 {
   uart_obj_t *p_uart = (uart_obj_t*) param;
   uint8_t uart_num = p_uart->uart_num;
-  int rx_fifo_len = 0;
+
+  uint32_t uart_intr_status;
+  uint32_t rx_fifo_len_on_intr;
+  int rx_fifo_len;
+
   portBASE_TYPE HPTaskAwoken = 0;
 
   typeof(uart_context[uart_num])* pCtxt = &( uart_context[uart_num] );
@@ -747,56 +807,21 @@ static void UART_ISR_ATTR uart_rx_intr_handler_default(void *param)
   typeof(pCtxt->spinlock)* pHalLock = &( pCtxt->spinlock );
 
   // Get asserted interrupts and process in priority order
-  uart_event_t uart_event = { .type = UART_EVENT_MAX };
+  uart_event_t uart_event = { .type = UART_EVENT_MAX, .size = 0 };
   uint32_t uart_intr_defmask = 0;
-  uint32_t uart_intr_status = uart_hal_get_intsts_mask(pHal);
+
+
+  INTR_GET_FLAGS();
+
   uint32_t uart_intr_status_prev = 0;
-  uint32_t uart_intr_status_nochange_loops = 0;
+  int uart_intr_status_nochange_loops = 10;
 
   bool brk_flg = 0;
 
   while (1)
   {
-    // Emit any events setup in the previous run of the loop
-    if (uart_event.type != UART_EVENT_MAX && p_uart->xQueueUart)
-    {
-      if (pdFALSE == xQueueSendFromISR(p_uart->xQueueUart, (void * )&uart_event, &HPTaskAwoken))
-      {
-        ESP_EARLY_LOGV(UART_TAG, "UART event queue full");
-      }
-      uart_event.type = UART_EVENT_MAX;
-    }
-
-    // Check if there are any more flags to process
-    if (uart_intr_status == 0)
-    {
-      // Check if there are new flags to process
-      uart_intr_status = uart_hal_get_intsts_mask(pHal);
-      if (!uart_intr_status)
-      {
-        // Break the outer while loop
-        break;
-      }
-      uart_intr_status_nochange_loops = 0;
-    }
-    else
-    {
-      if(uart_intr_status_prev == uart_intr_status)
-      {
-        if(++uart_intr_status_nochange_loops > 10)
-        { // Some flags were not caught by code in loop
-          ESP_EARLY_LOGW(UART_TAG, "Unhandled interrupt flags cleared 0x%06X.",uart_intr_status);
-          INTR_CLR(uart_intr_status);
-          break;
-        }
-      }
-      else
-      {
-        uart_intr_status_nochange_loops = 0;
-      }
-    }
-    uart_intr_status_prev = uart_intr_status;
-    // ----------------------------------------------------------------------------------------
+    // Emit any events setup in the previous iteration of the loop
+    INTR_EVENT_EMIT();
 
     // Generate break event if FIFO was emptied due to a break signal
     if (brk_flg)
@@ -804,6 +829,66 @@ static void UART_ISR_ATTR uart_rx_intr_handler_default(void *param)
       brk_flg = false;
       uart_event.type = UART_BREAK;
       continue;
+    }
+
+    // Check if there are any more flags to process
+    if (uart_intr_status == 0)
+    {
+      // Check if there are new flags to process
+      INTR_GET_FLAGS();
+      if (!uart_intr_status)
+      {
+        // Break the outer while loop
+        break;
+      }
+      uart_intr_status_nochange_loops = 10;
+    }
+    else
+    {
+      if(uart_intr_status_prev == uart_intr_status)
+      {
+        if(uart_intr_status_nochange_loops-- <= 0)
+        { // Some flags were not caught by code in loop
+          ESP_EARLY_LOGW(UART_TAG, "Unhandled interrupt flags cleared 0x%06X.",uart_intr_status);
+          INTR_CLR(uart_intr_status);
+          INTR_GET_FLAGS();
+          if(uart_intr_status == 0) break;
+          uart_intr_status_nochange_loops = 5;
+        }
+      }
+      else
+      {
+        uart_intr_status_nochange_loops = 10;
+      }
+    }
+    uart_intr_status_prev = uart_intr_status;
+    // ----------------------------------------------------------------------------------------
+
+    if (INTR_IS_SET(UART_INTR_TX_BRK_DONE))
+    {
+      INTR_CRIT_ENTER();
+      uart_hal_tx_break(pHal, 0);
+      uart_hal_disable_intr_mask(pHal, UART_INTR_TX_BRK_DONE);
+      if (p_uart->tx_brk_flg == 1)
+      {
+        uart_hal_ena_intr_mask(pHal, UART_INTR_TXFIFO_EMPTY);
+      }
+      INTR_CRIT_EXIT();
+      INTR_CLR(UART_INTR_TX_BRK_DONE);
+      if (p_uart->tx_brk_flg == 1)
+      {
+        p_uart->tx_brk_flg = 0;
+        p_uart->tx_waiting_brk = 0;
+      }
+      else
+      {
+        xSemaphoreGiveFromISR(p_uart->tx_brk_sem, &HPTaskAwoken);
+      }
+    }
+
+    if (INTR_IS_SET(UART_INTR_TX_BRK_IDLE))
+    {
+      INTR_DISABLE_CLR(UART_INTR_TX_BRK_IDLE);
     }
 
 
@@ -814,8 +899,8 @@ static void UART_ISR_ATTR uart_rx_intr_handler_default(void *param)
     {
       if (INTR_IS_SET(UART_INTR_BRK_DET))
       {
-        INTR_CLR(UART_INTR_BRK_DET);
         brk_flg = true;
+        INTR_CLR(UART_INTR_BRK_DET);
       }
 
       if (pCtxt->pat_flg == 1)
@@ -830,36 +915,55 @@ static void UART_ISR_ATTR uart_rx_intr_handler_default(void *param)
         INTR_DISABLE_CLR(UART_INTR_RXFIFO_FULL | UART_INTR_RXFIFO_TOUT);
         if (INTR_IS_SET(UART_INTR_CMD_CHAR_DET))
         {
-          INTR_CLR(UART_INTR_CMD_CHAR_DET);
-          uart_event.type = UART_PATTERN_DET;
-          uart_event.size = rx_fifo_len;
           pCtxt->pat_flg = 1;
+          INTR_CLR(UART_INTR_CMD_CHAR_DET);
+          INTR_EVENT_SET(UART_PATTERN_DET,rx_fifo_len);
         }
         // No DATA event if buffer is already full
         continue;
       }
 
-      // Not full (yet)
+      // Not full (yet) - Read data
       uart_hal_read_rxfifo(pHal, p_uart->rx_data_buf, &rx_fifo_len);
+
+      if(!rx_fifo_len && brk_flg)
+      {
+        // Just break
+        continue;
+      }
+      p_uart->rx_cur_event_size += rx_fifo_len;
+
       uint8_t pat_chr = 0;
       uint8_t pat_num = 0;
       int pat_idx = -1;
       uart_hal_get_at_cmd_char(pHal, &pat_chr, &pat_num);
 
-      //Get the buffer from the HW FIFO
       if (INTR_IS_SET(UART_INTR_CMD_CHAR_DET))
       {
         INTR_CLR(UART_INTR_CMD_CHAR_DET);
         uart_event.type = UART_PATTERN_DET;
         uart_event.size = rx_fifo_len;
+        p_uart->rx_cur_event_size = 0;  // TODO: NIF/LIZN Investigate semantics of UART_PATTERN_DET event and deal proper event length
         pat_idx = uart_find_pattern_from_last(p_uart->rx_data_buf, rx_fifo_len - 1, pat_chr, pat_num);
       }
       else
       {
         //After Copying the Data From FIFO ,Clear RX intr_status
+        if(brk_flg)
+        {
+          INTR_EVENT_RXFIFO_SET(UART_BREAK);
+          brk_flg = false;
+        }
+        else
+        {
+          // We rely on break and timeout for framing. Only generate data events on RX timeout.
+          // Do not generate data events on normal transfers from fifo to ring buffer
+          if(INTR_IS_SET(UART_INTR_RXFIFO_TOUT))
+          {
+            INTR_EVENT_RXFIFO_SET(UART_DATA);
+          }
+        }
         INTR_CLR(UART_INTR_RXFIFO_TOUT | UART_INTR_RXFIFO_FULL);
-        uart_event.type = UART_DATA;
-        uart_event.size = rx_fifo_len;
         UART_ENTER_CRITICAL_ISR(&uart_selectlock);
         if (p_uart->uart_select_notif_callback)
         {
@@ -901,6 +1005,7 @@ static void UART_ISR_ATTR uart_rx_intr_handler_default(void *param)
         uart_event.type = UART_BUFFER_FULL;
         continue;
       }
+
 
       INTR_CRIT_ENTER();
       if (INTR_IS_SET(UART_INTR_CMD_CHAR_DET))
@@ -951,7 +1056,7 @@ static void UART_ISR_ATTR uart_rx_intr_handler_default(void *param)
       bool en_tx_flg = false;
       int tx_fifo_rem = uart_hal_get_txfifo_len(pHal);
 
-      while (tx_fifo_rem)
+      while (tx_fifo_rem>0)
       {
         // The loop here is needed in case all buffer items are very short.
         // Without a loop to fill up the HW TX FIFO, a watch_dog reset will be likely.
@@ -1047,8 +1152,6 @@ static void UART_ISR_ATTR uart_rx_intr_handler_default(void *param)
       continue;
     }
 
-
-    // RX Errors
     if (INTR_IS_SET(UART_INTR_RXFIFO_OVF))
     {
       // When fifo overflows, we reset the fifo.
@@ -1063,8 +1166,7 @@ static void UART_ISR_ATTR uart_rx_intr_handler_default(void *param)
       }
       UART_EXIT_CRITICAL_ISR(&uart_selectlock);
       INTR_CLR(UART_INTR_RXFIFO_OVF);
-      uart_hal_clr_intsts_mask(pHal, UART_INTR_RXFIFO_OVF);
-      uart_event.type = UART_FIFO_OVF;
+      INTR_EVENT_RXFIFO_FLUSH_SET(UART_FIFO_OVF);
       continue;
     }
 
@@ -1077,7 +1179,7 @@ static void UART_ISR_ATTR uart_rx_intr_handler_default(void *param)
       }
       UART_EXIT_CRITICAL_ISR(&uart_selectlock);
       INTR_CLR(UART_INTR_FRAM_ERR);
-      uart_event.type = UART_FRAME_ERR;
+      INTR_EVENT_RXFIFO_FLUSH_SET(UART_FRAME_ERR);
       continue;
     }
 
@@ -1090,43 +1192,13 @@ static void UART_ISR_ATTR uart_rx_intr_handler_default(void *param)
       }
       UART_EXIT_CRITICAL_ISR(&uart_selectlock);
       INTR_CLR(UART_INTR_PARITY_ERR);
-      uart_event.type = UART_PARITY_ERR;
-      continue;
-    }
-
-    if (INTR_IS_SET(UART_INTR_TX_BRK_DONE))
-    {
-      INTR_CRIT_ENTER();
-      uart_hal_tx_break(pHal, 0);
-      uart_hal_disable_intr_mask(pHal, UART_INTR_TX_BRK_DONE);
-      if (p_uart->tx_brk_flg == 1)
-      {
-        uart_hal_ena_intr_mask(pHal, UART_INTR_TXFIFO_EMPTY);
-      }
-      INTR_CRIT_EXIT();
-      INTR_CLR(UART_INTR_TX_BRK_DONE);
-      if (p_uart->tx_brk_flg == 1)
-      {
-        p_uart->tx_brk_flg = 0;
-        p_uart->tx_waiting_brk = 0;
-      }
-      else
-      {
-        xSemaphoreGiveFromISR(p_uart->tx_brk_sem, &HPTaskAwoken);
-      }
-      continue;
-    }
-
-    if (INTR_IS_SET(UART_INTR_TX_BRK_IDLE))
-    {
-      INTR_DISABLE_CLR(UART_INTR_TX_BRK_IDLE);
+      INTR_EVENT_RXFIFO_FLUSH_SET(UART_PARITY_ERR);
       continue;
     }
 
     if (INTR_IS_SET(UART_INTR_CMD_CHAR_DET))
     {
       INTR_CLR(UART_INTR_CMD_CHAR_DET);
-      continue;
     }
 
     if (INTR_IS_SET(UART_INTR_RS485_PARITY_ERR | UART_INTR_RS485_FRM_ERR | UART_INTR_RS485_CLASH))
@@ -1164,6 +1236,8 @@ static void UART_ISR_ATTR uart_rx_intr_handler_default(void *param)
       xSemaphoreGiveFromISR(p_uart_obj[uart_num]->tx_done_sem, &HPTaskAwoken);
       continue;
     }
+
+
 
   }    // End while(1)
 
@@ -1234,6 +1308,8 @@ int uart_tx_chars(uart_port_t uart_num, const char* buffer, uint32_t len)
     return tx_len;
 }
 
+int uart_tx_unchecked(uart_port_t uart_num, const char* src, size_t size, bool brk_en, int brk_len) __attribute__((alias("uart_tx_all")));
+
 static int uart_tx_all(uart_port_t uart_num, const char* src, size_t size, bool brk_en, int brk_len)
 {
     if(size == 0) {
@@ -1296,6 +1372,123 @@ static int uart_tx_all(uart_port_t uart_num, const char* src, size_t size, bool 
     xSemaphoreGive(p_uart_obj[uart_num]->tx_mux);
     return original_size;
 }
+
+#if 0
+typedef struct tMsgPart* MsgPartPtr;
+typedef const struct tMsgPart* MsgPartCPtr;
+typedef struct tMsgPart
+{
+  const void* pSrc;
+  unsigned    nSize;
+} MsgPartT;
+
+typedef struct tMultiPartMsg* MultiPartMsgPtr;
+typedef const struct tMultiPartMsg* MultiPartMsgCPtr;
+typedef struct tMultiPartMsg
+{
+  union
+  {
+    struct
+    {
+      MsgPartT    sHead;
+      MsgPartT    sBody;
+      MsgPartT    sTail;
+    };
+    MsgPartT      aParts[3];
+  };
+  unsigned  nBreakLen;
+} MultiPartMsgT;
+
+int uart_tx_multi(uart_port_t uart_num, MultiPartMsgCPtr pMsg)
+{
+    if(!pMsg) return 0;
+    size_t size = 0;
+    MsgPartCPtr pPart = pMsg->aParts;
+    MsgPartCPtr pPartE = &(pMsg->aParts[3]);
+    for(MsgPartCPtr pP = pMsg->aParts; pP<pPartE; pP++)
+    {
+      if(pP->pSrc) size += pP->nSize;
+    }
+    if(size == 0) {
+        return 0;
+    }
+    size_t original_size = size;
+
+    //lock for uart_tx
+    xSemaphoreTake(p_uart_obj[uart_num]->tx_mux, (portTickType)portMAX_DELAY);
+    p_uart_obj[uart_num]->coll_det_flg = false;
+    if(p_uart_obj[uart_num]->tx_buf_size > 0)
+    {
+        int max_size = xRingbufferGetMaxItemSize(p_uart_obj[uart_num]->tx_ring_buf);
+        int max_chunk = max_size / 2;
+        uart_tx_data_t evt;
+        evt.tx_data.size = size;
+        evt.tx_data.brk_len = pMsg->nBreakLen;
+        evt.type = pMsg->nBreakLen ? UART_DATA_BREAK : UART_DATA;
+        xRingbufferSend(p_uart_obj[uart_num]->tx_ring_buf, (void*) &evt, sizeof(uart_tx_data_t), portMAX_DELAY);
+        while(size > 0)
+        {
+            while(!(pPart->pSrc && pPart->nSize)) pPart++;  // Skip any empty parts
+            int         nSrcSize = pPart->nSize;
+            const char* pSrc     = pPart->pSrc;
+            while(nSrcSize)
+            {
+              int send_size = (nSrcSize > max_chunk) ? max_chunk : nSrcSize;
+              xRingbufferSend(p_uart_obj[uart_num]->tx_ring_buf, (void*) (pSrc), send_size, portMAX_DELAY);
+              nSrcSize -= send_size;
+              size -= send_size;
+              pSrc += send_size;
+              uart_enable_tx_intr(uart_num, 1, UART_EMPTY_THRESH_DEFAULT);
+            }
+            pPart++;
+        }
+    }
+    else
+    {
+        while(size)
+        {
+            //semaphore for tx_fifo available
+            while(!(pPart->pSrc && pPart->nSize)) pPart++;  // Skip any empty parts
+            int             nSrcSize = pPart->nSize;
+            const uint8_t*  pSrc     = pPart->pSrc;
+            while(nSrcSize)
+            {
+              if(pdTRUE == xSemaphoreTake(p_uart_obj[uart_num]->tx_fifo_sem, (portTickType)portMAX_DELAY))
+              {
+                  if (UART_IS_MODE_SET(uart_num, UART_MODE_RS485_HALF_DUPLEX))
+                  {
+                      UART_ENTER_CRITICAL(&(uart_context[uart_num].spinlock));
+                      uart_hal_set_rts(&(uart_context[uart_num].hal), 0);
+                      uart_hal_ena_intr_mask(&(uart_context[uart_num].hal), UART_INTR_TX_DONE);
+                      UART_EXIT_CRITICAL(&(uart_context[uart_num].spinlock));
+                  }
+                  uint32_t sent_size = 0;
+                  uart_hal_write_txfifo(&(uart_context[uart_num].hal), (const uint8_t*)pSrc, nSrcSize, &sent_size);
+                  nSrcSize -= sent_size;
+                  size -= sent_size;
+                  pSrc += sent_size;
+                  if(size) {
+                      p_uart_obj[uart_num]->tx_waiting_fifo = true;
+                      uart_enable_tx_intr(uart_num, 1, UART_EMPTY_THRESH_DEFAULT);
+                  }
+              }
+            }
+            pPart++;
+        }
+        if(pMsg->nBreakLen) {
+            uart_hal_clr_intsts_mask(&(uart_context[uart_num].hal), UART_INTR_TX_BRK_DONE);
+            UART_ENTER_CRITICAL(&(uart_context[uart_num].spinlock));
+            uart_hal_tx_break(&(uart_context[uart_num].hal), pMsg->nBreakLen);
+            uart_hal_ena_intr_mask(&(uart_context[uart_num].hal), UART_INTR_TX_BRK_DONE);
+            UART_EXIT_CRITICAL(&(uart_context[uart_num].spinlock));
+            xSemaphoreTake(p_uart_obj[uart_num]->tx_brk_sem, (portTickType)portMAX_DELAY);
+        }
+        xSemaphoreGive(p_uart_obj[uart_num]->tx_fifo_sem);
+    }
+    xSemaphoreGive(p_uart_obj[uart_num]->tx_mux);
+    return original_size;
+}
+#endif
 
 int uart_write_bytes(uart_port_t uart_num, const char* src, size_t size)
 {
@@ -1501,6 +1694,8 @@ esp_err_t uart_driver_install(uart_port_t uart_num, int rx_buffer_size, int tx_b
         p_uart_obj[uart_num]->tx_brk_len = 0;
         p_uart_obj[uart_num]->tx_waiting_brk = 0;
         p_uart_obj[uart_num]->rx_buffered_len = 0;
+        p_uart_obj[uart_num]->rx_cur_event_size = 0;
+
         uart_pattern_queue_reset(uart_num, UART_PATTERN_DET_QLEN_DEFAULT);
 
         if(uart_queue) {
@@ -1549,16 +1744,16 @@ err:
     return r;
 }
 
-int a = 0;
-
 //Make sure no other tasks are still using UART before you call this function
 esp_err_t uart_driver_delete(uart_port_t uart_num)
 {
     UART_CHECK((uart_num < UART_NUM_MAX), "uart_num error", ESP_FAIL);
     if(p_uart_obj[uart_num] == NULL) {
-        ESP_LOGI(UART_TAG, "ALREADY NULL");
+        ESP_LOGD(UART_TAG, "ALREADY NULL");
         return ESP_OK;
     }
+    ESP_LOGI(UART_TAG, "Deleting UART%d driver",uart_num);
+
     esp_intr_free(p_uart_obj[uart_num]->intr_handle);
     uart_disable_rx_intr(uart_num);
     uart_disable_tx_intr(uart_num);
