@@ -17,6 +17,9 @@ ESPTOOLPY_SRC := $(COMPONENT_PATH)/esptool/esptool.py
 ESPTOOLPY := $(PYTHON) $(ESPTOOLPY_SRC) --chip esp32
 ESPTOOLPY_SERIAL := $(ESPTOOLPY) --port $(ESPPORT) --baud $(ESPBAUD) --before $(CONFIG_ESPTOOLPY_BEFORE) --after $(CONFIG_ESPTOOLPY_AFTER)
 
+ESPTOOLBASH_LIZN_SERIAL := $(ESPTOOLPY) --port $(ESPPORT) --baud $(ESPBAUD) --before $(CONFIG_ESPTOOLPY_BEFORE) --after $(CONFIG_ESPTOOLPY_AFTER)
+
+
 # Supporting esptool command line tools
 ESPEFUSEPY := $(PYTHON) $(COMPONENT_PATH)/esptool/espefuse.py
 ESPSECUREPY := $(PYTHON) $(COMPONENT_PATH)/esptool/espsecure.py
@@ -87,16 +90,41 @@ encrypted-flash:
 	@exit 1
 endif
 
-flash: all_binaries $(ESPTOOLPY_SRC) $(call prereq_if_explicit,erase_flash) partition_table_get_info | check_python_dependencies
+flash-all-dependencies: all_binaries $(ESPTOOLPY_SRC) $(call prereq_if_explicit,erase_flash) partition_table_get_info | check_python_dependencies
+
+ifdef CONFIG_SRCLIB_CUSTOM_FLASH_COMMAND
+FLASH_COMMAND ?= $(ESPTOOL_ALL_FLASH_ARGS)
+else
+FLASH_COMMAND ?= $CONFIG_SRCLIB_CUSTOM_FLASH_COMMAND
+endif
+
+ifndef CONFIG_SRCLIB_CUSTOM_FLASH_ENABLED
+flash: standard-flash
+else
+flash: custom-flash
+endif
+
+
+custom-flash: flash-all-dependencies
+	@echo "LIZN config: Flashing binaries to the chips at serial port (app at offset $(APP_OFFSET))..."
+ifdef CONFIG_SECURE_BOOT_ENABLED
+	@echo "(Secure boot enabled, so bootloader not flashed automatically. See 'make bootloader' output)"
+endif
+	$(FLASH_COMMAND) $(ESPTOOL_ALL_FLASH_ARGS)
+ 
+standard-flash: flash-all-dependencies
 	@echo "Flashing binaries to serial port $(ESPPORT) (app at offset $(APP_OFFSET))..."
 ifdef CONFIG_SECURE_BOOT_ENABLED
 	@echo "(Secure boot enabled, so bootloader not flashed automatically. See 'make bootloader' output)"
 endif
 	$(ESPTOOLPY_WRITE_FLASH) $(ESPTOOL_ALL_FLASH_ARGS)
 
+
 app-flash: $(APP_BIN) $(ESPTOOLPY_SRC) $(call prereq_if_explicit,erase_flash) partition_table_get_info | check_python_dependencies
 	@echo "Flashing app to serial port $(ESPPORT), offset $(APP_OFFSET)..."
 	$(ESPTOOLPY_WRITE_FLASH) $(APP_OFFSET) $(APP_BIN)
+
+
 
 ifdef CONFIG_SECURE_FLASH_ENCRYPTION_MODE_DEVELOPMENT
 encrypted-app-flash: $(APP_BIN) $(ESPTOOLPY_SRC) $(call prereq_if_explicit,erase_flash) partition_table_get_info | check_python_dependencies
