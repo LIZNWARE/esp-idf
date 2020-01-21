@@ -53,6 +53,7 @@ typedef struct {
  * @brief UART event types used in the ring buffer
  */
 typedef enum {
+    UART_DATA_PART,         /*!< UART data event*/
     UART_DATA,              /*!< UART data event*/
     UART_BREAK,             /*!< UART break event*/
     UART_BUFFER_FULL,       /*!< UART RX buffer full event*/

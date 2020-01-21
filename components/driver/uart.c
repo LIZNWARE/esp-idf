@@ -962,6 +962,10 @@ static void UART_ISR_ATTR uart_rx_intr_handler_default(void *param)
           {
             INTR_EVENT_RXFIFO_SET(UART_DATA);
           }
+          else if(INTR_IS_SET(UART_INTR_RXFIFO_FULL))
+          {
+            INTR_EVENT_RXFIFO_SET(UART_DATA_PART);
+          }
         }
         INTR_CLR(UART_INTR_RXFIFO_TOUT | UART_INTR_RXFIFO_FULL);
         UART_ENTER_CRITICAL_ISR(&uart_selectlock);
