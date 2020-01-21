@@ -308,6 +308,7 @@ PRIVILEGED_DATA static portMUX_TYPE xTaskQueueMutex = portMUX_INITIALIZER_UNLOCK
 
 	PRIVILEGED_DATA static uint32_t ulTaskSwitchedInTime[portNUM_PROCESSORS] = {0U};	/*< Holds the value of a timer/counter the last time a task was switched in on a particular core. */
 	PRIVILEGED_DATA static uint32_t ulTotalRunTime = 0UL;		/*< Holds the total amount of execution time as defined by the run time counter clock. */
+  static UBaseType_t xResetRunTimeCounter = 0;
 
 #endif
 
@@ -2345,6 +2346,9 @@ UBaseType_t uxTaskGetNumberOfTasks( void )
 			/* Is there a space in the array for each task in the system? */
 			if( uxArraySize >= uxCurrentNumberOfTasks )
 			{
+        #if ( configGENERATE_RUN_TIME_STATS == 1)
+			    xResetRunTimeCounter = (pulTotalRunTime && *pulTotalRunTime);
+        #endif
 				/* Fill in an TaskStatus_t structure with information on each
 				task in the Ready state. */
 				do
@@ -3759,6 +3763,7 @@ BaseType_t xTaskGetAffinity( TaskHandle_t xTask )
 				#if ( configGENERATE_RUN_TIME_STATS == 1 )
 				{
 					pxTaskStatusArray[ uxTask ].ulRunTimeCounter = pxNextTCB->ulRunTimeCounter;
+					if(xResetRunTimeCounter) pxNextTCB->ulRunTimeCounter = 0;
 				}
 				#else
 				{
