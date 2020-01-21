@@ -749,7 +749,7 @@ extern "C" {
 #endif
 
 #ifndef configTASKLIST_INCLUDE_COREID
-    #define configTASKLIST_INCLUDE_COREID   0
+    #define configTASKLIST_INCLUDE_COREID   1
 #endif
 
 #ifndef portASSERT_IF_INTERRUPT_PRIORITY_INVALID
