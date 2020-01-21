@@ -634,6 +634,9 @@ clean: app-clean bootloader-clean config-clean ldgen-clean
 # or out of date, and exit if so. Components can add paths to this variable.
 #
 # This only works for components inside IDF_PATH
+ifndef IDF_SKIP_CHECK_SUBMODULES
+IDF_SKIP_CHECK_SUBMODULES = 0
+endif
 check-submodules:
 # for internal use:
 # skip submodule check if running on Gitlab CI and job is configured as not clone submodules
